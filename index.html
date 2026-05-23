@@ -41,13 +41,29 @@
     color: var(--toolbar-text);
     display: flex;
     align-items: center;
-    padding: 0 10px;
+    padding: 0 8px;
     height: 42px;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
     border-bottom: 2px solid #3b82f6;
     overflow: hidden;
   }
+
+  #back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.75);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 5px;
+    width: 28px;
+    height: 28px;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  #back-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
 
   #app-logo {
     font-family: 'Playfair Display', serif;
@@ -122,11 +138,19 @@
     border-bottom: 1px solid rgba(255,255,255,0.08);
     position: relative;
     z-index: 100;
+    overflow: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+  #menubar-inner {
+    display: flex;
+    align-items: stretch;
     overflow-x: auto;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
+    flex: 1;
+    min-width: 0;
   }
-  #menubar::-webkit-scrollbar { display: none; }
+  #menubar-inner::-webkit-scrollbar { display: none; }
 
   .menu-item {
     position: relative;
@@ -150,16 +174,15 @@
 
   .dropdown {
     display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
+    position: fixed;
     background: #1e3a6e;
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    min-width: 190px;
+    min-width: 180px;
+    max-width: calc(100vw - 12px);
     padding: 4px 0;
-    z-index: 999;
+    z-index: 9999;
   }
   .menu-item.open .dropdown { display: block; }
 
@@ -266,14 +289,16 @@
   /* ─── RULER ─── */
   #ruler {
     background: var(--ruler-bg);
-    height: 22px;
+    height: 28px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     overflow: hidden;
     position: relative;
     width: 100%;
+    cursor: col-resize;
+    user-select: none;
   }
-  #ruler canvas { display: block; max-width: 100%; }
+  #ruler canvas { display: block; width: 100%; height: 28px; }
 
   /* ─── WORKSPACE ─── */
   #workspace {
@@ -501,6 +526,35 @@
     z-index: 200;
   }
 
+  /* ─── ODAK MODU ─── */
+  body.focus-mode #titlebar,
+  body.focus-mode #menubar,
+  body.focus-mode #toolbar,
+  body.focus-mode #ruler,
+  body.focus-mode #statusbar { display: none !important; }
+  body.focus-mode #workspace { padding: 40px 0; }
+  body.focus-mode #focus-exit {
+    display: flex !important;
+  }
+  #focus-exit {
+    display: none;
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 9999;
+    background: rgba(13,27,62,0.85);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(4px);
+  }
+
   /* ─── PRINT ─── */
   @media print {
     body > *:not(#workspace) { display: none !important; }
@@ -512,12 +566,68 @@
   #workspace::-webkit-scrollbar { width: 8px; }
   #workspace::-webkit-scrollbar-track { background: #93c5fd; }
   #workspace::-webkit-scrollbar-thumb { background: #1a56db; border-radius: 4px; }
+
+  /* ─── ŞABLON BUTONU ─── */
+  .tpl-btn {
+    background: #eff6ff;
+    border: 1.5px solid #93c5fd;
+    border-radius: 8px;
+    padding: 14px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+  }
+  .tpl-btn:hover { background: #dbeafe; border-color: #1a56db; }
 </style>
 </head>
 <body>
 
+<!-- ODAK ÇIKIŞ -->
+<button id="focus-exit" onclick="toggleFocus()">✕ Odak Modundan Çık</button>
+
+<!-- ŞABLON MODAL -->
+<div class="modal-overlay" id="templateModal">
+  <div class="modal" style="max-width:480px">
+    <h2>📋 Şablon Seç</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <button class="tpl-btn" onclick="applyTemplate('blank')">
+        <div style="font-size:28px;margin-bottom:6px">📄</div>
+        <div style="font-weight:600;font-size:13px">Boş Belge</div>
+      </button>
+      <button class="tpl-btn" onclick="applyTemplate('letter')">
+        <div style="font-size:28px;margin-bottom:6px">✉️</div>
+        <div style="font-weight:600;font-size:13px">Resmi Mektup</div>
+      </button>
+      <button class="tpl-btn" onclick="applyTemplate('cv')">
+        <div style="font-size:28px;margin-bottom:6px">👤</div>
+        <div style="font-weight:600;font-size:13px">Özgeçmiş</div>
+      </button>
+      <button class="tpl-btn" onclick="applyTemplate('report')">
+        <div style="font-size:28px;margin-bottom:6px">📊</div>
+        <div style="font-weight:600;font-size:13px">Rapor</div>
+      </button>
+      <button class="tpl-btn" onclick="applyTemplate('meeting')">
+        <div style="font-size:28px;margin-bottom:6px">📅</div>
+        <div style="font-weight:600;font-size:13px">Toplantı Notu</div>
+      </button>
+      <button class="tpl-btn" onclick="applyTemplate('essay')">
+        <div style="font-size:28px;margin-bottom:6px">📝</div>
+        <div style="font-weight:600;font-size:13px">Makale / Deneme</div>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal('templateModal')">İptal</button>
+    </div>
+  </div>
+</div>
+
 <!-- TITLE BAR -->
 <div id="titlebar">
+  <a href="https://mugol-portal.github.io" id="back-btn" title="Portala Dön">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+  </a>
   <div id="app-logo">Mu<span class="red">Göl</span><span class="word-badge">WORD</span></div>
   <input type="text" id="doc-title-input" value="Yeni Belge">
   <div class="title-actions">
@@ -530,15 +640,18 @@
 
 <!-- MENU BAR -->
 <div id="menubar">
+  <div id="menubar-inner">
   <div class="menu-item">
     <button class="menu-trigger">Dosya</button>
     <div class="dropdown">
       <button class="dropdown-item" onclick="closeMenus();newDoc()">📄 Yeni Belge <span class="shortcut">Ctrl+N</span></button>
+      <button class="dropdown-item" onclick="closeMenus();openModal('templateModal')">📋 Şablon Seç</button>
       <button class="dropdown-item" onclick="closeMenus();openFile()">📂 Aç <span class="shortcut">Ctrl+O</span></button>
       <div class="dropdown-separator"></div>
       <button class="dropdown-item" onclick="closeMenus();saveDoc()">💾 Kaydet <span class="shortcut">Ctrl+S</span></button>
       <button class="dropdown-item" onclick="closeMenus();saveAsHTML()">🌐 HTML Olarak Kaydet</button>
       <button class="dropdown-item" onclick="closeMenus();saveAsTxt()">📝 Metin Olarak Kaydet</button>
+      <button class="dropdown-item" onclick="closeMenus();copyToClipboard()">📋 Panoya Kopyala</button>
       <div class="dropdown-separator"></div>
       <button class="dropdown-item" onclick="closeMenus();printDoc()">🖨 Yazdır <span class="shortcut">Ctrl+P</span></button>
     </div>
@@ -564,6 +677,7 @@
       <button class="dropdown-item" onclick="closeMenus();zoomChange(0.8)">🔍 Uzaklaştır</button>
       <button class="dropdown-item" onclick="closeMenus();zoomReset()">⬜ Normale Dön</button>
       <div class="dropdown-separator"></div>
+      <button class="dropdown-item" onclick="closeMenus();toggleFocus()">🎯 Odak Modu</button>
       <button class="dropdown-item" onclick="closeMenus();toggleDark()">🌙 Karanlık Mod</button>
     </div>
   </div>
@@ -572,6 +686,10 @@
     <div class="dropdown">
       <button class="dropdown-item" onclick="closeMenus();openTableModal()">📊 Tablo</button>
       <button class="dropdown-item" onclick="closeMenus();insertImage()">🖼 Resim</button>
+      <button class="dropdown-item" onclick="closeMenus();openShapeModal()">🔷 Şekil</button>
+      <button class="dropdown-item" onclick="closeMenus();openEmojiPicker()">😊 Emoji</button>
+      <button class="dropdown-item" onclick="closeMenus();insertStickyNote()">📌 Yapışkan Not</button>
+      <div class="dropdown-separator"></div>
       <button class="dropdown-item" onclick="closeMenus();insertHR()">➖ Yatay Çizgi</button>
       <button class="dropdown-item" onclick="closeMenus();insertPageBreak()">📃 Sayfa Sonu</button>
       <button class="dropdown-item" onclick="closeMenus();insertLink()">🔗 Bağlantı</button>
@@ -590,15 +708,22 @@
       <button class="dropdown-item" onclick="closeMenus();setHeading('h2')">H2 Başlık 2</button>
       <button class="dropdown-item" onclick="closeMenus();setHeading('h3')">H3 Başlık 3</button>
       <button class="dropdown-item" onclick="closeMenus();setHeading('p')">¶ Normal</button>
+      <div class="dropdown-separator"></div>
+      <button class="dropdown-item" onclick="closeMenus();setLineSpacing(1.0)">↕ Satır Aralığı 1.0</button>
+      <button class="dropdown-item" onclick="closeMenus();setLineSpacing(1.5)">↕ Satır Aralığı 1.5</button>
+      <button class="dropdown-item" onclick="closeMenus();setLineSpacing(2.0)">↕ Satır Aralığı 2.0</button>
+      <button class="dropdown-item" onclick="closeMenus();setLineSpacing(2.5)">↕ Satır Aralığı 2.5</button>
     </div>
   </div>
   <div class="menu-item">
     <button class="menu-trigger">Yardım</button>
     <div class="dropdown">
       <button class="dropdown-item" onclick="closeMenus();showWordCount()">📊 Kelime Sayımı</button>
+      <button class="dropdown-item" onclick="closeMenus();openWordGoal()">🎯 Kelime Hedefi</button>
       <button class="dropdown-item" onclick="previewDoc()">👁 Önizleme</button>
       <div class="dropdown-separator"></div>
       <button class="dropdown-item" onclick="closeMenus();showAbout()">ℹ MuGöl WORD Hakkında</button>
+    </div>
     </div>
   </div>
 </div>
@@ -709,7 +834,20 @@
   </select>
   <div class="tb-sep"></div>
 
-  <!-- Zoom -->
+  <!-- Superscript / Subscript -->
+  <button class="tb-btn" title="Üst Simge" onclick="execCmd('superscript')">
+    <svg viewBox="0 0 24 24"><path d="M22 7h-2v1h3v1h-4V7c0-.55.45-1 1-1h2V5h-3V4h3c.55 0 1 .45 1 1v1c0 .55-.45 1-1 1zM5.88 20H3.56l3.4-5.2-3.19-4.8h2.32l2.09 3.4 2.09-3.4h2.28l-3.18 4.8L12.76 20h-2.32l-2.28-3.6L5.88 20z"/></svg>
+  </button>
+  <button class="tb-btn" title="Alt Simge" onclick="execCmd('subscript')">
+    <svg viewBox="0 0 24 24"><path d="M22 18h-2v1h3v1h-4v-2c0-.55.45-1 1-1h2v-1h-3v-1h3c.55 0 1 .45 1 1v1c0 .55-.45 1-1 1zM5.88 16H3.56l3.4-5.2-3.19-4.8h2.32l2.09 3.4 2.09-3.4h2.28l-3.18 4.8L12.76 16h-2.32l-2.28-3.6L5.88 16z"/></svg>
+  </button>
+  <div class="tb-sep"></div>
+
+  <!-- Focus mode -->
+  <button class="tb-btn" id="btn-focus" title="Odak Modu" onclick="toggleFocus()">
+    <svg viewBox="0 0 24 24"><path d="M3 9H1v14c0 1.1.9 2 2 2h14v-2H3V9zm18-6H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H7V5h14v14z"/></svg>
+  </button>
+  <div class="tb-sep"></div>
   <button class="tb-btn" title="Uzaklaştır" onclick="zoomChange(0.8)">
     <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></svg>
   </button>
@@ -827,6 +965,74 @@
 
 <input type="file" id="file-open-input" accept=".html,.htm,.txt" style="display:none" onchange="handleFileOpen(event)">
 
+<!-- SHAPE MODAL -->
+<div class="modal-overlay" id="shapeModal">
+  <div class="modal">
+    <h2>🔷 Şekil Ekle</h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      <button class="shape-pick" onclick="insertShape('rect')" title="Dikdörtgen"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">⬛</button>
+      <button class="shape-pick" onclick="insertShape('circle')" title="Daire"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">⚫</button>
+      <button class="shape-pick" onclick="insertShape('triangle')" title="Üçgen"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">🔺</button>
+      <button class="shape-pick" onclick="insertShape('star')" title="Yıldız"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">⭐</button>
+      <button class="shape-pick" onclick="insertShape('diamond')" title="Elmas"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">💠</button>
+      <button class="shape-pick" onclick="insertShape('arrow-right')" title="Ok (Sağ)"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">➡️</button>
+      <button class="shape-pick" onclick="insertShape('heart')" title="Kalp"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">❤️</button>
+      <button class="shape-pick" onclick="insertShape('cloud')" title="Bulut"
+        style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:10px;cursor:pointer;font-size:22px">☁️</button>
+    </div>
+    <label>Renk:</label>
+    <input type="color" id="shape-color" value="#1a56db" style="width:100%;height:36px;margin-bottom:14px;padding:2px">
+    <label>Boyut:</label>
+    <select id="shape-size" style="width:100%;margin-bottom:14px">
+      <option value="80">Küçük (80px)</option>
+      <option value="120" selected>Orta (120px)</option>
+      <option value="180">Büyük (180px)</option>
+      <option value="240">Çok Büyük (240px)</option>
+    </select>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal('shapeModal')">İptal</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMOJI PICKER MODAL -->
+<div class="modal-overlay" id="emojiModal">
+  <div class="modal" style="max-width:340px">
+    <h2>😊 Emoji Ekle</h2>
+    <input type="text" id="emoji-search" placeholder="Emoji ara..." oninput="filterEmojis(this.value)" style="margin-bottom:10px">
+    <div id="emoji-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:220px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal('emojiModal')">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORD GOAL MODAL -->
+<div class="modal-overlay" id="wordGoalModal">
+  <div class="modal" style="min-width:min(300px,92vw)">
+    <h2>🎯 Kelime Hedefi</h2>
+    <label>Hedef kelime sayısı:</label>
+    <input type="number" id="word-goal-input" value="500" min="1" max="100000">
+    <div id="word-goal-progress" style="margin-bottom:14px">
+      <div style="background:#e2e8f0;border-radius:4px;height:10px;overflow:hidden">
+        <div id="word-goal-bar" style="height:100%;background:#1a56db;transition:width 0.3s;width:0%"></div>
+      </div>
+      <p id="word-goal-label" style="font-size:12px;color:#555;margin-top:6px;text-align:center"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal('wordGoalModal')">Kapat</button>
+      <button class="modal-btn confirm" onclick="applyWordGoal()">Hedef Belirle</button>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -879,33 +1085,43 @@ function closeMenus() {
   document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('open'));
 }
 
-// ─── MENÜ TOGGLE (mousedown = focus çalmaz) ───
+// ─── MENÜ TOGGLE ───
 document.querySelectorAll('.menu-trigger').forEach(trigger => {
-  const open = function(e) {
-    e.preventDefault();
+  trigger.addEventListener('click', e => {
     e.stopPropagation();
-    const item = trigger.closest('.menu-item');
-    const wasOpen = item.classList.contains('open');
+    saveSelection();
+    const menuItem = trigger.closest('.menu-item');
+    const wasOpen = menuItem.classList.contains('open');
     closeMenus();
-    if (!wasOpen) item.classList.add('open');
-  };
-  trigger.addEventListener('mousedown', open);
-  trigger.addEventListener('touchstart', open, { passive: false });
+    if (!wasOpen) {
+      menuItem.classList.add('open');
+      const dropdown = menuItem.querySelector('.dropdown');
+      if (dropdown) {
+        const rect = trigger.getBoundingClientRect();
+        // Geçici olarak görünür yap, genişliği ölç
+        dropdown.style.top = '-9999px';
+        dropdown.style.left = '-9999px';
+        const dropW = dropdown.getBoundingClientRect().width || 200;
+        let left = rect.left;
+        if (left + dropW > window.innerWidth - 6) {
+          left = Math.max(4, window.innerWidth - dropW - 6);
+        }
+        dropdown.style.top = rect.bottom + 'px';
+        dropdown.style.left = left + 'px';
+      }
+    }
+  });
 });
 
-// Dropdown öğelerine mousedown'da focus çalma
+// Dropdown öğelerine mousedown'da focus çalma (masaüstü)
 document.querySelectorAll('.dropdown-item').forEach(item => {
   item.addEventListener('mousedown', e => e.preventDefault());
-  item.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
 });
 
 // Dışarı tıklayınca kapat
-document.addEventListener('mousedown', e => {
-  if (!e.target.closest('#menubar')) closeMenus();
+document.addEventListener('click', e => {
+  if (!e.target.closest('#menubar') && !e.target.closest('.dropdown')) closeMenus();
 });
-document.addEventListener('touchstart', e => {
-  if (!e.target.closest('#menubar')) closeMenus();
-}, { passive: true });
 
 // ─── FONT AİLESİ ───
 function changeFontFamily(val) {
@@ -973,6 +1189,69 @@ function applyHiliteColor(val) {
   editor.focus();
 }
 
+// ─── DOM'A DOĞRUDAN ELEMAN EKLE (execCommand'sız, mobil uyumlu) ───
+function insertNodeAtCursor(node) {
+  editor.focus();
+  const sel = window.getSelection();
+  let range;
+  if (savedRange) {
+    range = savedRange;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else if (sel && sel.rangeCount > 0) {
+    range = sel.getRangeAt(0);
+  } else {
+    // Hiç seçim yoksa editor'ın sonuna ekle
+    range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+  }
+  range.deleteContents();
+  range.insertNode(node);
+  // İmleci eklenen elemanın arkasına taşı
+  range.setStartAfter(node);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  savedRange = range.cloneRange();
+  updateStatus();
+}
+
+function insertHTMLAtCursor(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const frag = document.createDocumentFragment();
+  let lastNode = null;
+  while (tmp.firstChild) {
+    lastNode = tmp.firstChild;
+    frag.appendChild(lastNode);
+  }
+  editor.focus();
+  const sel = window.getSelection();
+  let range;
+  if (savedRange) {
+    range = savedRange.cloneRange();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else if (sel && sel.rangeCount > 0) {
+    range = sel.getRangeAt(0);
+  } else {
+    range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+  }
+  range.deleteContents();
+  range.insertNode(frag);
+  if (lastNode) {
+    range.setStartAfter(lastNode);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    savedRange = range.cloneRange();
+  }
+  updateStatus();
+}
+
 // ─── TABLO ───
 function openTableModal() { closeMenus(); openModal('tableModal'); }
 function insertTable() {
@@ -985,20 +1264,16 @@ function insertTable() {
   for (let r = 0; r < rows - 1; r++) {
     html += '<tr>';
     for (let c = 0; c < cols; c++)
-      html += '<td style="border:1px solid #bbb;padding:6px 10px;min-width:60px">&nbsp;</td>';
+      html += '<td style="border:1px solid #bbb;padding:6px 10px;min-width:60px"> </td>';
     html += '</tr>';
   }
   html += '</tbody></table><p><br></p>';
-  restoreSelection();
-  editor.focus();
-  document.execCommand('insertHTML', false, html);
+  insertHTMLAtCursor(html);
   closeModal('tableModal');
-  updateStatus();
 }
 
 // ─── RESİM ───
 function insertImage() {
-  closeMenus();
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -1007,51 +1282,49 @@ function insertImage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      restoreSelection();
-      editor.focus();
-      document.execCommand('insertHTML', false,
-        `<img src="${ev.target.result}" style="max-width:100%;border-radius:4px;margin:6px 0;display:block">`);
-      updateStatus();
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.style.cssText = 'max-width:100%;border-radius:4px;margin:6px 0;display:block';
+      insertNodeAtCursor(img);
     };
     reader.readAsDataURL(file);
   };
+  closeMenus();
   input.click();
 }
 
 // ─── YATAY ÇİZGİ / SAYFA SONU / LİNK / TARİH ───
 function insertHR() {
-  closeMenus(); restoreSelection(); editor.focus();
-  document.execCommand('insertHTML', false,
-    '<hr style="border:none;border-top:2px solid #93c5fd;margin:16px 0"><p><br></p>');
+  closeMenus();
+  insertHTMLAtCursor('<hr style="border:none;border-top:2px solid #93c5fd;margin:16px 0"><p><br></p>');
 }
 function insertPageBreak() {
-  closeMenus(); restoreSelection(); editor.focus();
-  document.execCommand('insertHTML', false,
-    '<div style="page-break-after:always;border-bottom:2px dashed #93c5fd;margin:20px 0;text-align:center;color:#93c5fd;font-size:11px">— Sayfa Sonu —</div><p><br></p>');
+  closeMenus();
+  insertHTMLAtCursor('<div style="page-break-after:always;border-bottom:2px dashed #93c5fd;margin:20px 0;text-align:center;color:#93c5fd;font-size:11px">— Sayfa Sonu —</div><p><br></p>');
 }
 function insertLink() {
-  closeMenus();
-  saveSelection();
   const sel = window.getSelection();
-  document.getElementById('link-text').value = sel ? sel.toString() : '';
+  document.getElementById('link-text').value = (sel && sel.toString()) ? sel.toString() : '';
   document.getElementById('link-url').value = 'https://';
+  closeMenus();
   openModal('linkModal');
 }
 function doInsertLink() {
   const text = document.getElementById('link-text').value.trim();
   const url  = document.getElementById('link-url').value.trim();
-  if (!url || url === 'https://') return;
-  restoreSelection();
-  editor.focus();
-  document.execCommand('insertHTML', false,
-    `<a href="${url}" target="_blank" style="color:#1a56db;text-decoration:underline">${text || url}</a>`);
+  if (!url || url === 'https://') { showToast('Geçerli bir URL girin'); return; }
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.style.cssText = 'color:#1a56db;text-decoration:underline';
+  a.textContent = text || url;
+  insertNodeAtCursor(a);
   closeModal('linkModal');
-  updateStatus();
 }
 function insertDate() {
-  closeMenus(); restoreSelection(); editor.focus();
-  document.execCommand('insertText', false, new Date().toLocaleString('tr-TR'));
-  updateStatus();
+  closeMenus();
+  const tn = document.createTextNode(new Date().toLocaleString('tr-TR'));
+  insertNodeAtCursor(tn);
 }
 
 // ─── ÖNİZLEME (YENİ) ───
@@ -1093,9 +1366,10 @@ function zoomChange(factor) {
 function zoomReset() { currentZoom = 1; applyZoom(); }
 function applyZoom() {
   document.querySelectorAll('.page').forEach(p => {
-    p.style.transform = `scale(${currentZoom})`;
-    p.style.transformOrigin = 'top center';
-    p.style.marginBottom = currentZoom !== 1 ? `${(currentZoom - 1) * 1123 / 2}px` : '';
+    p.style.transform = '';
+    p.style.transformOrigin = '';
+    p.style.marginBottom = '';
+    p.style.zoom = currentZoom;
   });
   document.getElementById('zoom-level').textContent = Math.round(currentZoom * 100) + '%';
 }
@@ -1316,39 +1590,220 @@ function handleFileOpen(e) {
 function printDoc() { closeMenus(); window.print(); }
 function showAbout() { closeMenus(); openModal('aboutModal'); }
 
-// ─── CETVEL ───
+// ─── CETVEL (GELİŞTİRİLMİŞ) ───
 function drawRuler() {
   const canvas = document.getElementById('rulerCanvas');
-  const ruler   = document.getElementById('ruler');
-  const w = ruler.clientWidth;
-  canvas.width  = w;
-  canvas.height = 22;
+  const rulerEl = document.getElementById('ruler');
+  const page = document.getElementById('page1');
+  if (!canvas || !rulerEl) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = rulerEl.clientWidth;
+  const H = 28;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = dark ? '#162044' : '#dbeafe';
-  ctx.fillRect(0, 0, w, 22);
-  ctx.strokeStyle = dark ? '#3b82f6' : '#3b82f6';
-  ctx.fillStyle   = dark ? '#93c5fd' : '#1e3a6e';
-  ctx.font = '9px DM Sans, sans-serif';
+  ctx.scale(dpr, dpr);
+
+  // Arka plan
+  const bgColor  = dark ? '#162044' : '#dbeafe';
+  const lineColor = '#3b82f6';
+  const textColor = dark ? '#93c5fd' : '#1e3a6e';
+  const marginColor = dark ? 'rgba(99,179,237,0.18)' : 'rgba(191,219,254,0.55)';
+
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, W, H);
+
+  // Sayfanın ekrandaki gerçek sol konumunu al
+  const pageRect = page ? page.getBoundingClientRect() : null;
+  const rulerRect = rulerEl.getBoundingClientRect();
+
+  let pageLeft, pageWidth;
+  if (pageRect) {
+    pageLeft  = pageRect.left - rulerRect.left;
+    pageWidth = pageRect.width;
+  } else {
+    pageWidth = Math.min(794, W * 0.98);
+    pageLeft  = (W - pageWidth) / 2;
+  }
+
+  // Sayfa padding'ini CSS'ten hesapla (clamp(16px,7vw,100px))
+  const vw = window.innerWidth;
+  const pagePad = Math.min(100, Math.max(16, vw * 0.07));
+
+  const contentLeft  = pageLeft + pagePad;
+  const contentWidth = pageWidth - pagePad * 2;
+  const contentRight = contentLeft + contentWidth;
+
+  // Kenar boşluğu alanları (gölge)
+  ctx.fillStyle = marginColor;
+  ctx.fillRect(pageLeft, 0, pagePad, H);
+  ctx.fillRect(contentRight, 0, pagePad, H);
+
+  // Kenar çizgileri (sol/sağ margin)
+  ctx.strokeStyle = '#60a5fa';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(contentLeft, 0); ctx.lineTo(contentLeft, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(contentRight, 0); ctx.lineTo(contentRight, H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Cetvel çizgileri — cm bazlı, sayfa içeriğinden başlar
+  const PX_PER_CM = 37.795; // 96dpi
+  ctx.strokeStyle = lineColor;
+  ctx.fillStyle   = textColor;
+  ctx.font = `bold 8px 'DM Sans', sans-serif`;
   ctx.textAlign = 'center';
-  const pageW = Math.min(794, w * 0.98);
-  const offset = (w - pageW) / 2 + pageW * 0.126;
-  const contentW = pageW * 0.748;
-  for (let i = 0; i <= contentW; i++) {
-    const x = offset + i;
-    const isCm = Math.abs(i % 37.8) < 0.8;
-    const isMm = Math.abs(i % 7.56) < 0.8;
-    if (isCm) {
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(x, 6); ctx.lineTo(x, 22); ctx.stroke();
-      ctx.fillText(Math.round(i / 37.8), x, 6);
-    } else if (isMm) {
-      ctx.lineWidth = 0.5;
-      ctx.beginPath(); ctx.moveTo(x, 14); ctx.lineTo(x, 22); ctx.stroke();
+  ctx.textBaseline = 'top';
+
+  // 0 noktası = contentLeft
+  const totalCm = contentWidth / PX_PER_CM;
+  for (let cm = 0; cm <= Math.ceil(totalCm) + 1; cm++) {
+    const x = contentLeft + cm * PX_PER_CM;
+    if (x < 0 || x > W) continue;
+
+    // Cm işareti
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, H); ctx.stroke();
+    if (cm > 0 && cm <= Math.ceil(totalCm)) {
+      ctx.fillText(String(cm), x, 0);
+    }
+
+    // Mm ara çizgileri
+    for (let mm = 1; mm < 10; mm++) {
+      const mx = x + mm * PX_PER_CM / 10;
+      if (mx > W) break;
+      ctx.lineWidth = mm === 5 ? 0.8 : 0.4;
+      const tickH = mm === 5 ? H * 0.45 : H * 0.28;
+      ctx.beginPath(); ctx.moveTo(mx, H - tickH); ctx.lineTo(mx, H); ctx.stroke();
     }
   }
+
+  // Sıfır etiketi
+  ctx.fillText('0', contentLeft, 0);
+
+  // Sayfa kenarı çizgileri
+  ctx.strokeStyle = dark ? '#2d4a7a' : '#93c5fd';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pageLeft, 0); ctx.lineTo(pageLeft, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pageLeft + pageWidth, 0); ctx.lineTo(pageLeft + pageWidth, H); ctx.stroke();
 }
 window.addEventListener('resize', drawRuler);
-drawRuler();
+// Workspace scroll edince cetvel güncellenmeli (sayfa DOM yeri değişmez ama yeniden çiz)
+document.getElementById('workspace').addEventListener('scroll', drawRuler);
+// İlk çizim — DOM hazır olunca
+requestAnimationFrame(drawRuler);
+
+// ─── ODAK MODU ───
+let focusMode = false;
+function toggleFocus() {
+  focusMode = !focusMode;
+  document.body.classList.toggle('focus-mode', focusMode);
+  const btn = document.getElementById('btn-focus');
+  if (btn) btn.classList.toggle('active', focusMode);
+  if (focusMode) {
+    editor.focus();
+    showToast('Odak modu açık — sağ üstten çıkabilirsin');
+  }
+  setTimeout(drawRuler, 50);
+}
+
+// ─── ŞABLONLAR ───
+const TEMPLATES = {
+  blank: { title: 'Yeni Belge', html: '<p><br></p>' },
+  letter: {
+    title: 'Resmi Mektup',
+    html: `<p style="text-align:right">${new Date().toLocaleDateString('tr-TR')}</p>
+<p><br></p>
+<p><strong>Sayın İlgili,</strong></p>
+<p><br></p>
+<p>Konu: ___________________________</p>
+<p><br></p>
+<p>İlgi yazınız ve konuya ilişkin olarak aşağıdaki bilgileri sunmak isterim.</p>
+<p><br></p>
+<p>[İçerik buraya yazılacak]</p>
+<p><br></p>
+<p>Saygılarımla,</p>
+<p><br></p>
+<p>Ad Soyad<br>Ünvan<br>Kurum</p>`
+  },
+  cv: {
+    title: 'Özgeçmiş',
+    html: `<h1 style="text-align:center">Ad Soyad</h1>
+<p style="text-align:center;color:#555">📧 email@ornek.com &nbsp;|&nbsp; 📞 0555 000 0000 &nbsp;|&nbsp; 📍 Şehir, Türkiye</p>
+<hr style="border:none;border-top:2px solid #1a56db;margin:12px 0">
+<h2>Özet</h2>
+<p>Kısa profesyonel özet buraya yazılacak.</p>
+<h2>Deneyim</h2>
+<p><strong>Şirket Adı</strong> — Pozisyon &nbsp;<em>(Yıl – Devam)</em></p>
+<ul><li>Görev 1</li><li>Görev 2</li></ul>
+<h2>Eğitim</h2>
+<p><strong>Üniversite Adı</strong> — Bölüm &nbsp;<em>(Yıl – Yıl)</em></p>
+<h2>Beceriler</h2>
+<p>Beceri 1, Beceri 2, Beceri 3</p>`
+  },
+  report: {
+    title: 'Rapor',
+    html: `<h1>Rapor Başlığı</h1>
+<p><strong>Tarih:</strong> ${new Date().toLocaleDateString('tr-TR')} &nbsp;|&nbsp; <strong>Hazırlayan:</strong> Ad Soyad</p>
+<hr style="border:none;border-top:2px solid #1a56db;margin:12px 0">
+<h2>1. Yönetici Özeti</h2>
+<p>Bu bölümde raporun kısa özeti yer alır.</p>
+<h2>2. Giriş</h2>
+<p>Konunun arka planı ve amacı buraya yazılır.</p>
+<h2>3. Bulgular</h2>
+<p>Analiz sonuçları ve veriler buraya eklenir.</p>
+<h2>4. Sonuç ve Öneriler</h2>
+<p>Değerlendirme ve öneriler buraya yazılır.</p>`
+  },
+  meeting: {
+    title: 'Toplantı Notu',
+    html: `<h1>Toplantı Notları</h1>
+<p><strong>Tarih:</strong> ${new Date().toLocaleDateString('tr-TR')}</p>
+<p><strong>Yer:</strong> _______________</p>
+<p><strong>Katılımcılar:</strong> _______________</p>
+<hr style="border:none;border-top:2px solid #1a56db;margin:12px 0">
+<h2>Gündem Maddeleri</h2>
+<ol><li>Madde 1</li><li>Madde 2</li><li>Madde 3</li></ol>
+<h2>Alınan Kararlar</h2>
+<ul><li>Karar 1</li><li>Karar 2</li></ul>
+<h2>Aksiyon Maddeleri</h2>
+<table style="border-collapse:collapse;width:100%">
+  <tr><th style="border:1px solid #bbb;padding:6px;background:#dbeafe">Görev</th><th style="border:1px solid #bbb;padding:6px;background:#dbeafe">Sorumlu</th><th style="border:1px solid #bbb;padding:6px;background:#dbeafe">Tarih</th></tr>
+  <tr><td style="border:1px solid #bbb;padding:6px"> </td><td style="border:1px solid #bbb;padding:6px"> </td><td style="border:1px solid #bbb;padding:6px"> </td></tr>
+</table>`
+  },
+  essay: {
+    title: 'Makale',
+    html: `<h1 style="text-align:center">Makale Başlığı</h1>
+<p style="text-align:center;color:#555"><em>Yazar Adı — ${new Date().toLocaleDateString('tr-TR')}</em></p>
+<hr style="border:none;border-top:2px solid #1a56db;margin:12px 0">
+<h2>Giriş</h2>
+<p>Konuya giriş ve tezin sunulduğu bölüm.</p>
+<h2>Gelişme</h2>
+<p>Ana argümanlar ve destekleyici bilgiler burada yer alır.</p>
+<h2>Sonuç</h2>
+<p>Tezin özetlendiği ve önerilerin sunulduğu bölüm.</p>
+<h2>Kaynakça</h2>
+<p>1. Kaynak Adı, Yazar, Yıl.</p>`
+  }
+};
+
+function applyTemplate(key) {
+  const tpl = TEMPLATES[key];
+  if (!tpl) return;
+  if (editor.innerText.trim() && !confirm('Mevcut içerik silinecek. Devam edilsin mi?')) return;
+  editor.innerHTML = tpl.html;
+  document.getElementById('doc-title-input').value = tpl.title;
+  closeModal('templateModal');
+  updateStatus();
+  showToast('✓ Şablon yüklendi: ' + tpl.title);
+}
+
+
 
 // ─── KLAVYE KISA YOLLARI ───
 document.addEventListener('keydown', e => {
@@ -1365,7 +1820,153 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeFind(); closeMenus(); }
 });
 
-// ─── TOOLBAR DURUM SENKRONİZASYONU ───
+// ─── SATIR ARALIĞI ───
+function setLineSpacing(val) {
+  editor.style.lineHeight = val;
+  showToast('Satır aralığı: ' + val);
+}
+
+// ─── ŞEKİL EKLE ───
+function openShapeModal() { openModal('shapeModal'); }
+function insertShape(type) {
+  const color = document.getElementById('shape-color').value;
+  const size  = parseInt(document.getElementById('shape-size').value);
+  const s = size, h = size;
+  let svg = '';
+  switch(type) {
+    case 'rect':
+      svg = `<rect x="4" y="4" width="${s-8}" height="${h-8}" rx="6" fill="${color}"/>`;
+      break;
+    case 'circle':
+      svg = `<circle cx="${s/2}" cy="${h/2}" r="${s/2-4}" fill="${color}"/>`;
+      break;
+    case 'triangle':
+      svg = `<polygon points="${s/2},4 ${s-4},${h-4} 4,${h-4}" fill="${color}"/>`;
+      break;
+    case 'star':
+      const cx=s/2, cy=h/2, r1=s/2-4, r2=s/4;
+      let pts='';
+      for(let i=0;i<10;i++){
+        const a=Math.PI/5*i - Math.PI/2;
+        const r=i%2===0?r1:r2;
+        pts+=(cx+r*Math.cos(a))+','+(cy+r*Math.sin(a))+' ';
+      }
+      svg = `<polygon points="${pts.trim()}" fill="${color}"/>`;
+      break;
+    case 'diamond':
+      svg = `<polygon points="${s/2},4 ${s-4},${h/2} ${s/2},${h-4} 4,${h/2}" fill="${color}"/>`;
+      break;
+    case 'arrow-right':
+      const ah=h/2, aw=s*0.6;
+      svg = `<polygon points="4,${ah*0.6} ${aw},${ah*0.6} ${aw},4 ${s-4},${ah} ${aw},${h-4} ${aw},${ah*1.4} 4,${ah*1.4}" fill="${color}"/>`;
+      break;
+    case 'heart':
+      svg = `<path d="M${s/2} ${h-8} C${s/2} ${h-8} 6 ${h*0.6} 6 ${h*0.38} C6 ${h*0.2} ${s*0.22} ${h*0.12} ${s/2} ${h*0.3} C${s*0.78} ${h*0.12} ${s-6} ${h*0.2} ${s-6} ${h*0.38} C${s-6} ${h*0.6} ${s/2} ${h-8} ${s/2} ${h-8}Z" fill="${color}"/>`;
+      break;
+    case 'cloud':
+      svg = `<ellipse cx="${s*0.35}" cy="${h*0.58}" rx="${s*0.22}" ry="${h*0.2}" fill="${color}"/>
+             <ellipse cx="${s*0.58}" cy="${h*0.48}" rx="${s*0.26}" ry="${h*0.24}" fill="${color}"/>
+             <ellipse cx="${s*0.75}" cy="${h*0.58}" rx="${s*0.18}" ry="${h*0.17}" fill="${color}"/>
+             <rect x="${s*0.14}" y="${h*0.56}" width="${s*0.72}" height="${h*0.22}" rx="2" fill="${color}"/>`;
+      break;
+  }
+  const svgEl = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${h}" viewBox="0 0 ${s} ${h}" style="display:inline-block;vertical-align:middle;margin:4px">${svg}</svg>`;
+  closeModal('shapeModal');
+  insertHTMLAtCursor(svgEl + '<p><br></p>');
+}
+
+// ─── EMOJİ PİCKER ───
+const EMOJIS = [
+  '😀','😁','😂','🤣','😃','😄','😅','😆','😇','😈','😉','😊',
+  '😋','😌','😍','🥰','😎','😏','😐','😑','😒','😓','😔','😕',
+  '🙂','🙃','😖','😗','😘','😙','😚','😛','😜','😝','😞','😟',
+  '😠','😡','😢','😣','😤','😥','😦','😧','😨','😩','😪','😫',
+  '😬','😭','😮','😯','😰','😱','😲','😳','😴','😵','😶','😷',
+  '🤔','🤗','🤐','🤑','🤒','🤓','🤕','🤖','🤙','🤚','🤛','🤜',
+  '👍','👎','👏','🙌','🤝','👋','✌️','🤞','👌','🤟','🤘','☝️',
+  '❤️','🧡','💛','💚','💙','💜','🖤','💔','💕','💞','💓','💗',
+  '⭐','🌟','✨','💫','🔥','💥','❄️','🌈','☀️','🌙','⚡','🌊',
+  '🎉','🎊','🎈','🎁','🎀','🏆','🥇','🎯','🎮','🎲','🃏','🎭',
+  '🍎','🍊','🍋','🍇','🍓','🍕','🍔','🍟','🌮','🍜','☕','🍺',
+  '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🦁','🐮','🐷',
+  '🌸','🌺','🌻','🌹','🌷','🍀','🌿','🌱','🌲','🌳','🍁','🍂',
+  '🚀','✈️','🚗','🚕','🚙','🚌','🚎','🚑','🚒','🚓','🚔','🚖',
+  '💡','🔦','📱','💻','⌨️','🖥️','🖨️','📷','📸','📹','🎥','📞',
+  '📚','📖','📝','✏️','🖊️','🖋️','📌','📍','📎','🖇️','✂️','🗂️'
+];
+let emojiFiltered = [...EMOJIS];
+function renderEmojis(list) {
+  const grid = document.getElementById('emoji-grid');
+  grid.innerHTML = list.map(e =>
+    `<button onclick="pickEmoji('${e}')" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px;border-radius:4px;transition:background 0.1s" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='none'">${e}</button>`
+  ).join('');
+}
+function filterEmojis(q) {
+  renderEmojis(q ? EMOJIS.filter(e => e.includes(q)) : EMOJIS);
+}
+function openEmojiPicker() {
+  renderEmojis(EMOJIS);
+  document.getElementById('emoji-search').value = '';
+  openModal('emojiModal');
+}
+function pickEmoji(emoji) {
+  closeModal('emojiModal');
+  const tn = document.createTextNode(emoji);
+  insertNodeAtCursor(tn);
+}
+
+// ─── YAPIŞKAN NOT ───
+function insertStickyNote() {
+  const colors = ['#fef9c3','#fce7f3','#dbeafe','#dcfce7','#ede9fe'];
+  const color = colors[Math.floor(Math.random()*colors.length)];
+  const html = `<div contenteditable="false" style="display:inline-block;background:${color};border-radius:8px;padding:12px 16px;margin:8px 0;min-width:160px;max-width:280px;box-shadow:2px 4px 12px rgba(0,0,0,0.12);font-family:'DM Sans',sans-serif;font-size:13px;color:#1e293b;position:relative;vertical-align:top">
+    <div style="font-weight:700;font-size:11px;color:#64748b;margin-bottom:6px;letter-spacing:0.5px">📌 NOT</div>
+    <div contenteditable="true" style="outline:none;min-height:40px;line-height:1.5" placeholder="Notunuzu yazın...">Buraya yazın...</div>
+  </div><p><br></p>`;
+  insertHTMLAtCursor(html);
+}
+
+// ─── PANOYA KOPYALA ───
+function copyToClipboard() {
+  const text = editor.innerText || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('✓ Metin panoya kopyalandı'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✓ Metin panoya kopyalandı');
+  }
+}
+
+// ─── KELİME HEDEFİ ───
+let wordGoal = 0;
+function openWordGoal() {
+  document.getElementById('word-goal-input').value = wordGoal || 500;
+  updateWordGoalBar();
+  openModal('wordGoalModal');
+}
+function applyWordGoal() {
+  wordGoal = parseInt(document.getElementById('word-goal-input').value) || 0;
+  updateWordGoalBar();
+  closeModal('wordGoalModal');
+  showToast('🎯 Hedef: ' + wordGoal + ' kelime');
+}
+function updateWordGoalBar() {
+  if (!wordGoal) return;
+  const text = editor.innerText || '';
+  const current = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const pct = Math.min(100, Math.round(current / wordGoal * 100));
+  const bar = document.getElementById('word-goal-bar');
+  const lbl = document.getElementById('word-goal-label');
+  if (bar) { bar.style.width = pct + '%'; bar.style.background = pct >= 100 ? '#16a34a' : '#1a56db'; }
+  if (lbl) lbl.textContent = `${current} / ${wordGoal} kelime (${pct}%)`;
+}
+editor.addEventListener('input', () => { if (wordGoal) updateWordGoalBar(); });
+
+
 function syncToolbar() {
   const cmds = { 'btn-bold': 'bold', 'btn-italic': 'italic', 'btn-underline': 'underline', 'btn-strikethrough': 'strikeThrough' };
   for (const [id, cmd] of Object.entries(cmds)) {
